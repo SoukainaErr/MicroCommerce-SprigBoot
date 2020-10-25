@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -28,10 +32,10 @@ public class ProductController {
     private ProductDao productDao;
 
 
+
+
     //Récupérer la liste des produits
-
     @RequestMapping(value = "/Produits", method = RequestMethod.GET)
-
     public MappingJacksonValue listeProduits() {
 
         Iterable<Product> produits = productDao.findAll();
@@ -48,17 +52,40 @@ public class ProductController {
     }
 
 
+
+    @GetMapping(value = "/SortingProducts")
+    public MappingJacksonValue trierProduitsParOrdreAlphabetique(){
+        Iterable<Product> produits = productDao.findAll();
+        ((List<Product>) produits).sort(Comparator.comparing(Product::getNom));
+        FilterProvider listDeNosFiltres = new SimpleFilterProvider().addFilter("monFiltreDynamique", SimpleBeanPropertyFilter.serializeAllExcept("prixAchat"));
+
+        MappingJacksonValue produitsFiltres = new MappingJacksonValue(produits);
+
+        produitsFiltres.setFilters(listDeNosFiltres);
+        return produitsFiltres;
+    }
+
+
     //Récupérer un produit par son Id
     @ApiOperation(value = "Récupère un produit grâce à son ID à condition que celui-ci soit en stock!")
     @GetMapping(value = "/Produits/{id}")
-
-    public Product afficherUnProduit(@PathVariable int id) {
+    public MappingJacksonValue afficherUnProduit(@PathVariable int id) {
 
         Product produit = productDao.findById(id);
 
         if(produit==null) throw new ProduitIntrouvableException("Le produit avec l'id " + id + " est INTROUVABLE. Écran Bleu si je pouvais.");
+        FilterProvider listDeNosFiltres = new SimpleFilterProvider().addFilter("monFiltreDynamique", SimpleBeanPropertyFilter.serializeAllExcept("prixAchat"));
 
-        return produit;
+        MappingJacksonValue produitsFiltres = new MappingJacksonValue(produit);
+
+        produitsFiltres.setFilters(listDeNosFiltres);
+        return produitsFiltres;
+    }
+
+    @RequestMapping(value = "/afficherNomProduit/{id}",method = RequestMethod.GET)
+    public String afficherNomProduit(@PathVariable int id){
+        Product product= productDao.findById(id);
+        return product.getNom();
     }
 
 
